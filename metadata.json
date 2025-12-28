@@ -1,0 +1,5 @@
+{
+  "name": "Explore Math",
+  "description": "A next-generation interactive mathematics education engine covering everything from elementary school to university level. Dynamically generates deep, high-quality lessons using Gemini AI.",
+  "requestFramePermissions": []
+}
