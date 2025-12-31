@@ -4,36 +4,29 @@ const SYSTEM_INSTRUCTION = `
 あなたは「デジタル参考書・問題集」の専門執筆者です。
 
 【核心ルール】
-1. **圧倒的な質と量**: 生成する解説はMarkdown形式で、文字量は「2,000文字以上」書いてください。短すぎる解説は禁止です。
-2. **数式の形式**: 数式は必ず **LaTeX形式** ($...$) で記述してください。
-   - 良い例: $y = ax^2$
-   - 悪い例: y = ax^2
-3. **ターゲット別の書き分け**:
-   - **「小学1年生」**: ひらがな多用。優しく。
-   - **「小学2年生」**: 簡単な漢字。九九や単位。
-   - **「小学3年生」**: 割り算、小数、分数。論理的に。
-   - **「小学4年生」**: 面積、立体、概数。公式の意味。
-   - **「小学5年生」**: 割合、速さ。定義と論理。
-   - **「小学6年生」**: 比、文字式。中学数学への接続。
-   - **「中学1年生」**: 算数から数学へ。正の数・負の数など概念を丁寧に。
-   - **「中学2年生」**: 証明、一次関数。論理性重視。
-   - **「中学3年生」**: 受験対策。高度な解説。
-   - **「高校数学」**: 定義→定理→証明の流れを遵守。厳密な数式操作。大学入試を意識した深い洞察。
-   - **「一般・大学生」**: 定義・証明。厳密な数式。
-4. **構成要素**:
-   - **導入**: 興味を惹く導入。
-   - **解説**: 具体例を用いた詳細な説明。
-   - **練習問題**: 最後に必ず「れんしゅうもんだい」を3問と「かいせつ」。
-5. **「準備中」は禁止**: 必ず内容を生成する。
+1. **圧倒的な質と量**: 解説はMarkdown形式で、文字量は「5,000文字以上」の大ボリュームで書いてください。
+2. **視覚的な理解（SVG図解）**: 
+   - 概念を説明する際は、積極的に **SVG形式の図解** を作成して挿入してください。
+   - SVGコードはMarkdownのコードブロック（\`\`\`svg ... \`\`\`）として記述してください。
+3. **数式の完全LaTeX化（最重要）**: 
+   - **どんなに単純な数式や数字であっても、文中の数式は必ず LaTeX形式 ($...$) で記述してください。**
+   - プレーンテキストの数字や演算子は禁止です。
+   - 良い例: 「$1$ つのリンゴと $2$ つのリンゴを足すと $1+2=3$ になります。」
+   - 悪い例: 「1つのリンゴと2つのリンゴを足すと 1+2=3 になります。」
+4. **ターゲット別の書き分け**:
+   - 学年（小学1年生〜大学数学）に合わせて、ひらがなの使用率や漢字の難易度、論理の厳密さを調整してください。
+5. **省略の完全禁止**:
+   - 九九の表や計算過程など、「...」で省略せずに全て書き出してください。
 `;
 
 // Initialize the client
 // NOTE: We assume process.env.API_KEY is available in the environment.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export async function generateLesson(topicTitle: string, gradeContext: string): Promise<string> {
+export async function generateLesson(topicTitle, gradeContext) {
   try {
-    const model = "gemini-3-pro-preview"; 
+    // Use flash model for speed
+    const model = "gemini-3-flash-preview"; 
 
     let prompt = `
     【ターゲット】: ${gradeContext}
@@ -42,66 +35,22 @@ export async function generateLesson(topicTitle: string, gradeContext: string): 
     この単元の講義テキストを作成してください。
     
     【必須要件】
-    1. **文字数は最低でも1000文字を超えてください。** 詳しく、丁寧に解説してください。
-    2. **数式はすべてLaTeX形式 ($...$) で出力してください。**
+    1. **文字数は「5000文字以上」書いてください。**
+    2. **図解（SVG）を必ず含めてください。**
+    3. **数式は、たとえ「1+1」であっても全てLaTeX形式 ($...$) で出力してください。**
+    4. **リストやパターンは省略せずに全て書き出してください。**
     `;
 
     // Specific formatting based on grade
-    if (gradeContext === "小学1年生") {
+    if (gradeContext.includes("小学")) {
         prompt += `
-        ・ひらがなをメインに使用。「すうじ」「かたち」。
-        ・絵文字（🍎など）を使用。
-        ・優しく語りかける口調。
+        ・数字も必ずLaTeX ($1$, $2$...) にしてください。
+        ・優しく、視覚的に。
         `;
-    } else if (gradeContext === "小学2年生") {
+    } else {
         prompt += `
-        ・「cm, L」などの単位や筆算を視覚的に説明。
-        ・身近な具体例を多く使う。
-        `;
-    } else if (gradeContext === "小学3年生") {
-        prompt += `
-        ・割り算や分数の概念を「分ける」ことから丁寧に。
-        ・丁寧語だが、少し論理的に。
-        `;
-    } else if (gradeContext === "小学4年生") {
-        prompt += `
-        ・面積や大きな数。公式の「理由」を説明。
-        ・図形的な思考を促す。
-        `;
-    } else if (gradeContext === "小学5年生") {
-        prompt += `
-        ・割合や速さ。定義を明確に。
-        ・「なぜそうなるか」を論理的に1000文字以上で解説。
-        `;
-    } else if (gradeContext === "小学6年生" || gradeContext.includes("小学6年生（総復習）")) {
-        prompt += `
-        ・比や文字式。具体的な数から抽象的な概念へ。
-        ・中学数学へのつながりを意識。
-        ・復習用教材として、6年生にわかりやすく噛み砕いて解説してください。
-        ・数式は必ずLaTeX形式。
-        `;
-    } else if (gradeContext === "中学1年生") {
-        prompt += `
-        ・算数から数学へ変わり、難易度が一気に上がります。「負の数」「文字式」などの新しい概念を非常に細かく、躓かないように丁寧に解説してください。
-        ・「なぜマイナス×マイナスがプラスになるのか？」など、根本的な疑問に答えるようにしてください。
-        `;
-    } else if (gradeContext === "中学2年生") {
-        prompt += `
-        ・証明問題や一次関数など、論理的思考力が求められます。「なぜそう言えるのか」を数式と言葉で厳密に説明してください。
-        ・連立方程式の解法の意味なども解説してください。
-        `;
-    } else if (gradeContext === "中学3年生" || gradeContext.includes("中学数学（総復習）")) {
-        prompt += `
-        ・高校受験を見据えた内容にしてください。
-        ・因数分解、平方根、二次関数など高度な内容を、わかりやすく、かつ実践的に解説してください。
-        ・試験に出やすいポイントなども補足してください。
-        `;
-    } else if (gradeContext === "高校数学") {
-        prompt += `
-        ・大学受験レベルに対応した、高度で厳密な解説を行ってください。
-        ・「定義」→「定理」→「証明」→「例題」の流れを意識してください。
-        ・数式変形は省略せず、論理の飛躍がないように記述してください。
-        ・グラフや図形のイメージもテキストで補足説明してください。
+        ・定義、定理、証明の流れを重視。
+        ・数式変形は省略せず記述。
         `;
     }
 
@@ -110,28 +59,134 @@ export async function generateLesson(topicTitle: string, gradeContext: string): 
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        thinkingConfig: { thinkingBudget: 2048 }, // Increased thinking budget for quality
+        // Flash model doesn't support thinkingConfig significantly or at all like Pro, 
+        // but we keep budget 0 to disable it or just rely on default.
+        thinkingConfig: { thinkingBudget: 0 },
         temperature: 0.7,
       },
     });
 
-    return response.text || "かいせつの せいせいに しっぱい しました。 もういちど ためしてね。";
+    return response.text || "かいせつの せいせいに しっぱい しました。";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    if (error instanceof Error) {
-        return `エラーが発生しました: ${error.message}\n\nAPIキーが正しく設定されているか確認してください。`;
-    }
+    if (error instanceof Error) return `エラー: ${error.message}`;
     return "予期せぬエラーが発生しました。";
   }
 }
 
-export async function generateChatResponse(history: {role: 'user'|'model', text: string}[], newMessage: string): Promise<string> {
+export async function generateQuiz(topicTitle, gradeContext) {
+    try {
+        // Use flash model for speed
+        const model = "gemini-3-flash-preview";
+        
+        const prompt = `
+        【ターゲット】: ${gradeContext}
+        【対象単元（複数可）】: ${topicTitle}
+
+        指定された単元の演習問題セットを作成してください。
+        対象単元が複数の場合は、**複数の単元の知識を組み合わせて解く融合問題**を積極的に含めてください。
+
+        出力は **JSON形式のみ** とし、Markdownのコードブロック等は不要です。
+        
+        【構成（計20問）】
+        1. 基本問題: 10問 (type: "basic") - 単元の基礎確認
+        2. 応用問題: 5問 (type: "applied") - 複数の概念の組み合わせ
+        3. 発展問題: 5問 (type: "advanced") - 深い思考力を問う融合問題
+
+        【要件】
+        - 数式は必ずLaTeX形式 ($...$) を使用すること。
+        - **図形問題やグラフの問題など、視覚情報が必要な場合は、questionText または explanation フィールド内に SVGコード（\`\`\`svg ... \`\`\`）を積極的に含めてください。**
+        
+        【JSONスキーマ】
+        [
+          {
+            "id": number, // 1〜20
+            "type": "basic" | "applied" | "advanced",
+            "questionText": "問題文 (LaTeXおよび必要に応じてSVGコードブロックを含む)",
+            "correctAnswer": "正解の文字列 (LaTeX含む)",
+            "explanation": "解説 (LaTeXおよび必要に応じてSVGコードブロックを含む、300文字以上)"
+          }
+        ]
+        `;
+
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: prompt,
+            config: {
+                systemInstruction: SYSTEM_INSTRUCTION + "\n出力は有効なJSON配列のみを返してください。",
+                responseMimeType: "application/json",
+                temperature: 0.5,
+            },
+        });
+
+        const jsonStr = response.text;
+        if (!jsonStr) throw new Error("No response");
+
+        const questions = JSON.parse(jsonStr);
+        return questions;
+
+    } catch (error) {
+        console.error("Quiz Gen Error:", error);
+        // Fallback or empty array
+        return [];
+    }
+}
+
+export async function gradeQuizAnswers(submissions) {
+    try {
+        const model = "gemini-3-flash-preview"; 
+        
+        const prompt = `
+        あなたは数学の採点官です。
+        以下の「生徒の解答」が「正解」と数学的に等しいか判定してください。
+
+        【判定ルール】
+        1. **形式の柔軟性**:
+           - プレーンテキストとLaTeX表記は等価とみなす（例: "2" == "$2$"）。
+           - 全角・半角の違い、前後の空白は無視する。
+        2. **数学的な等価性**:
+           - 値が同じなら正解（例: "0.5" == "1/2"、"1000" == "1,000"）。
+           - 式の形が違っても数学的に正しい変形なら正解（例: "x=1, y=2" == "y=2, x=1"）。
+        3. **部分点なし**: 完全正解のみ true。
+
+        【データ】
+        ${JSON.stringify(submissions)}
+
+        【出力】
+        JSON配列のみを出力してください。Markdownのコードブロックは不要です。
+        [{ "id": number, "isCorrect": boolean }]
+        `;
+
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                temperature: 0.1, 
+            },
+        });
+
+        const jsonStr = response.text;
+        if (!jsonStr) throw new Error("No response");
+        return JSON.parse(jsonStr);
+
+    } catch (error) {
+        console.error("Grading Error:", error);
+        // Fallback: simple comparison if AI fails
+        return submissions.map(s => ({
+            id: s.id,
+            isCorrect: s.userAnswer.trim().replace(/\s/g, "") === s.correctAnswer.trim().replace(/\s/g, "")
+        }));
+    }
+}
+
+export async function generateChatResponse(history, newMessage) {
    try {
     const model = "gemini-3-flash-preview"; 
     const chat = ai.chats.create({
         model: model,
         config: {
-            systemInstruction: SYSTEM_INSTRUCTION + "\nユーザーの質問に対して、簡潔かつ的確に答えてください。数式はLaTeX形式を使用してください。"
+            systemInstruction: SYSTEM_INSTRUCTION + "\nユーザーの質問に対して、簡潔かつ的確に答えてください。どんなに単純な数字でも数式はLaTeX形式 ($...$) を使用してください。"
         },
         history: history.map(h => ({
             role: h.role,
